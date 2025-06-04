@@ -1,0 +1,25 @@
+package com.example.employeeattendancetracker.model; 
+import jakarta.persistence.*; 
+import lombok.AllArgsConstructor; 
+import lombok.Data; 
+import lombok.NoArgsConstructor; 
+import java.time.LocalDate; 
+@Entity 
+@Table(name = "attendance") 
+@Data 
+@NoArgsConstructor 
+@AllArgsConstructor 
+public class Attendance { 
+    @Id 
+    @GeneratedValue(strategy = GenerationType.IDENTITY) 
+    private Long attendanceId; 
+    // Use @ManyToOne for a proper relationship, assuming Employee entity exists 
+    @ManyToOne(fetch = FetchType.LAZY) 
+    @JoinColumn(name = "employee_id", nullable = false) // Foreign key column 
+    private Employee employee; // Link to Employee entity 
+    @Column(nullable = false) 
+    private LocalDate date; 
+    @Column(nullable = false) 
+    @Enumerated(EnumType.STRING) // Store enum as string 
+    private AttendanceStatus status; // Enum for Present/Absent 
+} 
