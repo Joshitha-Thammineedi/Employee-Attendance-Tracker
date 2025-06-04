@@ -1,0 +1,86 @@
+package com.example.employeeattendancetracker.service; 
+import com.example.employeeattendancetracker.model.Attendance; 
+import com.example.employeeattendancetracker.model.AttendanceStatus; 
+import com.example.employeeattendancetracker.model.Employee; 
+import com.example.employeeattendancetracker.repository.AttendanceRepository; 
+import com.example.employeeattendancetracker.repository.EmployeeRepository; 
+import org.springframework.beans.factory.annotation.Autowired; 
+import org.springframework.stereotype.Service; 
+import java.time.LocalDate; 
+import java.util.HashMap; 
+import java.util.List; 
+import java.util.Map; 
+import java.util.Optional; 
+import java.util.stream.Collectors; 
+@Service 
+public class AttendanceService { 
+    @Autowired 
+    private AttendanceRepository attendanceRepository; 
+    @Autowired 
+    private EmployeeRepository employeeRepository; 
+    public Attendance markAttendance(Long employeeId, AttendanceStatus status) { 
+        Employee employee = employeeRepository.findById(employeeId) 
+                .orElseThrow(() -> new RuntimeException("Employee not found with id: " + 
+employeeId)); 
+        LocalDate today = LocalDate.now(); 
+        // Check if attendance already marked for today 
+        Optional<Attendance> existingAttendance = 
+attendanceRepository.findByEmployeeAndDate(employee, today); 
+        if (existingAttendance.isPresent()) { 
+            // Option 1: Update existing attendance 
+            Attendance attendance = existingAttendance.get(); 
+            attendance.setStatus(status); 
+            return attendanceRepository.save(attendance); 
+            // Option 2: Throw an exception if marking attendance twice is not allowed 
+            // throw new RuntimeException("Attendance already marked for employee " + 
+employeeId + " today."); 
+        } else { 
+            // Create new attendance record 
+            Attendance newAttendance = new Attendance(); 
+    newAttendance.setEmployee(employee); 
+            newAttendance.setDate(today); 
+          newAttendance.setStatus(status); 
+            return attendanceRepository.save(newAttendance); 
+        } 
+    } 
+    public List<Attendance> getAttendanceForEmployee(Long employeeId) { 
+        Employee employee = employeeRepository.findById(employeeId) 
+                .orElseThrow(() -> new RuntimeException("Employee not found with id: " + 
+employeeId)); 
+        return attendanceRepository.findByEmployee(employee); 
+    } 
+    public List<Attendance> getDailyAttendanceReport(LocalDate date) { 
+        return attendanceRepository.findByDate(date); 
+    } 
+    // Report: Attendance summary per employee 
+    // Returns a map where key is employee ID and value is a map of status counts (e.g., 
+{PRESENT: 20, ABSENT: 5}) 
+    public Map<Long, Map<AttendanceStatus, Long>> getEmployeeAttendanceSummary() { 
+        List<Attendance> allAttendance = attendanceRepository.findAll(); 
+        return allAttendance.stream() 
+           .collect(Collectors.groupingBy( 
+                        attendance -> attendance.getEmployee().getEmployeeId(),   
+Collectors.groupingBy(Attendance::getStatus, Collectors.counting()) 
+                )); 
+    } 
+    // Report: Attendance summary per department 
+    // Returns a map where key is department name and value is a map of status counts 
+    public Map<String, Map<AttendanceStatus, Long>> getDepartmentAttendanceSummary() 
+{ 
+        List<Attendance> allAttendance = attendanceRepository.findAll(); 
+        return allAttendance.stream() 
+           .collect(Collectors.groupingBy( 
+                        attendance -> attendance.getEmployee().getDepartment(),      
+Collectors.groupingBy(Attendance::getStatus, Collectors.counting()) 
+                )); 
+    } 
+    // Can add more specific reports, e.g., employee's attendance within a date range 
+    public List<Attendance> getAttendanceForEmployeeByDateRange(Long employeeId, 
+LocalDate startDate, LocalDate endDate) { 
+        Employee employee = employeeRepository.findById(employeeId) 
+                .orElseThrow(() -> new RuntimeException("Employee not found with id: " + 
+employeeId)); 
+        return attendanceRepository.findByEmployeeAndDateBetween(employee, startDate, 
+endDate); 
+    } 
+} 
