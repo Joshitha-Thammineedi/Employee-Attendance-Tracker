@@ -1,0 +1,105 @@
+package com.example.employeeattendencetracker.controller; 
+import com.example.employeeattendancetracker.model.Attendance; 
+import com.example.employeeattendancetracker.model.AttendanceStatus; 
+import com.example.employeeattendancetracker.service.AttendanceService; 
+import org.springframework.beans.factory.annotation.Autowired; 
+import org.springframework.format.annotation.DateTimeFormat; 
+import org.springframework.http.HttpStatus; 
+import org.springframework.http.ResponseEntity; 
+import org.springframework.web.bind.annotation.*; 
+import java.time.LocalDate; 
+import java.util.List; 
+import java.util.Map; 
+@RestController 
+@RequestMapping("/api/attendance") 
+public class AttendanceController { 
+    @Autowired 
+    private AttendanceService attendanceService; 
+    // Endpoint for employees to mark their attendance 
+    // Requires employee role + Basic Auth 
+    // Example: POST /api/attendance/mark?employeeId=1&status=PRESENT 
+    @PostMapping("/mark") 
+    public ResponseEntity<Attendance> markAttendance( 
+            @RequestParam Long employeeId, 
+            @RequestParam AttendanceStatus status) { 
+        try { 
+            Attendance attendance = attendanceService.markAttendance(employeeId, status); 
+            return new ResponseEntity<>(attendance, HttpStatus.CREATED); 
+        } catch (RuntimeException e) { 
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // Or specific error code 
+        } 
+    } 
+    // Get attendance for a specific employee (Employee can view their own, Manager can 
+view any) 
+    // Requires employee or manager role 
+  @GetMapping("/employee/{employeeId}") 
+    public ResponseEntity<List<Attendance>> getAttendanceForEmployee(@PathVariable 
+Long employeeId) { 
+        try { 
+            List<Attendance> attendanceRecords = 
+attendanceService.getAttendanceForEmployee(employeeId); 
+            if (attendanceRecords.isEmpty()) { 
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT); 
+            } 
+            return new ResponseEntity<>(attendanceRecords, HttpStatus.OK); 
+        } catch (RuntimeException e) { 
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND); 
+        } 
+    } 
+    // Get daily attendance report (Manager access) 
+    // Example: GET /api/attendance/daily?date=2023-04-23 
+    @GetMapping("/daily") 
+    public ResponseEntity<List<Attendance>> getDailyAttendanceReport( 
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate 
+date) { 
+        List<Attendance> attendance = attendanceService.getDailyAttendanceReport(date); 
+        if (attendance.isEmpty()) { 
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT); 
+        } 
+        return new ResponseEntity<>(attendance, HttpStatus.OK); 
+    } 
+    // Get overall attendance summary per employee (Manager access) 
+    @GetMapping("/reports/employee-summary") 
+    public ResponseEntity<Map<Long, Map<AttendanceStatus, Long>>> 
+getEmployeeAttendanceSummary() { 
+        Map<Long, Map<AttendanceStatus, Long>> summary = 
+attendanceService.getEmployeeAttendanceSummary(); 
+        if (summary.isEmpty()) { 
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT); 
+        } 
+        return new ResponseEntity<>(summary, HttpStatus.OK); 
+    } 
+    // Get overall attendance summary per department (Manager access) 
+    @GetMapping("/reports/department-summary") 
+    public ResponseEntity<Map<String, Map<AttendanceStatus, Long>>> 
+getDepartmentAttendanceSummary() { 
+        Map<String, Map<AttendanceStatus, Long>> summary = 
+attendanceService.getDepartmentAttendanceSummary(); 
+        if (summary.isEmpty()) { 
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT); 
+        } 
+        return new ResponseEntity<>(summary, HttpStatus.OK); 
+    } 
+    // Get attendance for a specific employee within a date range (Employee/Manager access) 
+    // Example: GET /api/attendance/employee/1/range?startDate=2023-04
+01&endDate=2023-04-30 
+@GetMapping("/employee/{employeeId}/range") 
+    public ResponseEntity<List<Attendance>> getAttendanceForEmployeeByDateRange( 
+            @PathVariable Long employeeId, 
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate 
+startDate, 
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate 
+endDate) { 
+        try { 
+            List<Attendance> attendanceRecords = 
+attendanceService.getAttendanceForEmployeeByDateRange(employeeId, startDate, 
+endDate); 
+            if (attendanceRecords.isEmpty()) { 
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT); 
+            } 
+            return new ResponseEntity<>(attendanceRecords, HttpStatus.OK); 
+        } catch (RuntimeException e) { 
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND); 
+        } 
+    } 
+} 
