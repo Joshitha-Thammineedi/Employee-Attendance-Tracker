@@ -1,0 +1,81 @@
+package com.example.employeeattendancetracker.security; 
+import org.springframework.context.annotation.Bean; 
+import org.springframework.context.annotation.Configuration; 
+import org.springframework.http.HttpMethod; 
+import org.springframework.security.config.annotation.web.builders.HttpSecurity; 
+import 
+org.springframework.security.config.annotation.web.configuration.EnableWebSecurity; 
+import org.springframework.security.config.http.SessionCreationPolicy; 
+import org.springframework.security.core.userdetails.User; 
+import org.springframework.security.core.userdetails.UserDetails; 
+import org.springframework.security.core.userdetails.UserDetailsService; 
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder; 
+import org.springframework.security.crypto.password.PasswordEncoder; 
+import org.springframework.security.provisioning.InMemoryUserDetailsManager; 
+import org.springframework.security.web.SecurityFilterChain; 
+@Configuration 
+@EnableWebSecurity 
+public class SecurityConfig { 
+    @Bean 
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception { 
+        http 
+            .csrf(csrf -> csrf.disable()) // Disable CSRF for stateless REST API 
+          .authorizeHttpRequests(authorize -> authorize 
+                // Employee endpoints: 
+                // Employees can mark their attendance 
+       .requestMatchers(HttpMethod.POST, 
+"/api/attendance/mark").hasAnyRole("EMPLOYEE", "MANAGER") 
+                // Employees can view their own attendance (assuming employeeId matches their 
+authenticated ID later on) 
+                // For now, any employee or manager can view any employee's attendance by ID. 
+                // In a real app, you'd add logic to ensure employeeId matches authenticated user's 
+ID for /employee/{employeeId} 
+        .requestMatchers(HttpMethod.GET, 
+"/api/attendance/employee/").hasAnyRole("EMPLOYEE", "MANAGER") 
+                // Manager endpoints: 
+                // Managers can view all attendance reports 
+        .requestMatchers(HttpMethod.GET, "/api/attendance/daily").hasRole("MANAGER") 
+        .requestMatchers(HttpMethod.GET, "/api/attendance/reports/").hasRole("MANAGER") 
+                // Managers can manage employee data (CRUD for /api/employees) 
+.requestMatchers("/api/employees/").hasRole("MANAGER") 
+                // Any other request requires authentication 
+             .anyRequest().authenticated() 
+            ) 
+.httpBasic(org.springframework.security.config.Customizer.withDefaults()) // Use HTTP 
+Basic authentication 
+            .sessionManagement(session -> 
+session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)); // Stateless API 
+        return http.build(); 
+    } 
+    @Bean 
+    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) { 
+        // In-memory users for demonstration. 
+        // For a real application, you would use a database (e.g., Spring Data JPA for 
+UserDetails). 
+        // The employeeId in the URL/request body would need to map to the authenticated 
+user's ID. 
+        // For simplicity, 'manager' can manage any employee, 'employee1' marks for employee 
+1, 'employee2' for employee 2 etc. 
+        // This mapping needs to be implemented. 
+        UserDetails manager = User.builder() 
+            .username("manager") 
+.password(passwordEncoder.encode("managerpass")) 
+            .roles("MANAGER") 
+            .build(); 
+        UserDetails employee1 = User.builder() 
+            .username("employee1") 
+.password(passwordEncoder.encode("emp1pass")) 
+            .roles("EMPLOYEE") 
+            .build(); 
+        UserDetails employee2 = User.builder() 
+            .username("employee2") 
+.password(passwordEncoder.encode("emp2pass")) 
+            .roles("EMPLOYEE") 
+            .build(); 
+        return new InMemoryUserDetailsManager(manager, employee1, employee2); 
+    } 
+    @Bean 
+    public PasswordEncoder passwordEncoder() { 
+        return new BCryptPasswordEncoder(); // Use BCrypt for password hashing 
+    } 
+} 
