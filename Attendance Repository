@@ -1,0 +1,20 @@
+package com.example.employeeattendancetracker.repository; 
+import com.example.employeeattendancetracker.model.Attendance; 
+import com.example.employeeattendancetracker.model.Employee; 
+import org.springframework.data.jpa.repository.JpaRepository; 
+import org.springframework.stereotype.Repository; 
+import java.time.LocalDate; 
+import java.util.List; 
+import java.util.Optional; 
+@Repository 
+public interface AttendanceRepository extends JpaRepository<Attendance, Long> { 
+// Find attendance for a specific employee on a specific date 
+Optional<Attendance> findByEmployeeAndDate(Employee employee, LocalDate date); 
+// Find all attendance records for a specific employee 
+List<Attendance> findByEmployee(Employee employee); 
+// Find all attendance records for a specific date 
+List<Attendance> findByDate(LocalDate date); 
+// Find attendance records for a specific employee within a date range 
+List<Attendance> findByEmployeeAndDateBetween(Employee employee, LocalDate 
+startDate, LocalDate endDate); 
+} 
